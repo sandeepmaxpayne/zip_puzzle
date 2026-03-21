@@ -1,16 +1,39 @@
-# zip_puzzle
+# Zip Puzzle Studio
 
-A new Flutter project.
+Zip Puzzle Studio is a Flutter pathfinding puzzle game built around a 6x6 board, sequential checkpoints, and two distinct play styles.
 
-## Getting Started
+## Highlights
 
-This project is a starting point for a Flutter application.
+- `Easy` mode follows the hidden original route exactly.
+- `Hard` mode allows free movement through blank cells while still enforcing numbered checkpoints.
+- Light and dark themes.
+- Animated splash screen.
+- In-app info and privacy-policy sheets.
+- Google Play preparation notes and privacy-policy draft included in `docs/`.
 
-A few resources to get you started if this is your first Flutter project:
+## Screenshots
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Easy Mode
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+![Easy mode preview](docs/screenshots/easy_mode_preview.svg)
+
+### Hard Mode
+
+![Hard mode preview](docs/screenshots/hard_mode_preview.svg)
+
+## Project Docs
+
+- Privacy policy draft: [docs/privacy_policy.md](docs/privacy_policy.md)
+- Google Play Console notes: [docs/google_play_console_notes.md](docs/google_play_console_notes.md)
+
+## Run Locally
+
+```bash
+flutter pub get
+flutter run
+```
+
+## Repository Notes
+
+- Branding and UI copy are written to support an original project identity.
+- Copyright notice in app info: `Appruloft`

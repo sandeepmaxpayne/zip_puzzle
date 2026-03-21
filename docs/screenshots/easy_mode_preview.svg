@@ -1,0 +1,73 @@
+<svg width="900" height="1600" viewBox="0 0 900 1600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="1600" rx="48" fill="#EAF7F3"/>
+  <rect x="40" y="40" width="820" height="420" rx="42" fill="#F9FCFB"/>
+  <text x="90" y="135" fill="#10212B" font-size="62" font-family="Arial, Helvetica, sans-serif" font-weight="700">Zip Puzzle Studio</text>
+  <text x="90" y="200" fill="#49606E" font-size="34" font-family="Arial, Helvetica, sans-serif">Easy mode guides you through the original internal route.</text>
+  <rect x="700" y="90" width="110" height="58" rx="29" fill="#D9E6E4" stroke="#6B7F84" stroke-width="6"/>
+  <circle cx="733" cy="119" r="20" fill="#6B7F84"/>
+  <rect x="90" y="270" width="210" height="150" rx="28" fill="#DBEDF2"/>
+  <rect x="345" y="270" width="210" height="150" rx="28" fill="#D6F4EE"/>
+  <rect x="600" y="270" width="210" height="150" rx="28" fill="#FBECDD"/>
+  <text x="120" y="332" fill="#5D7179" font-size="28" font-family="Arial, Helvetica, sans-serif">Step</text>
+  <text x="120" y="388" fill="#0A7B83" font-size="54" font-family="Arial, Helvetica, sans-serif" font-weight="700">7</text>
+  <text x="375" y="332" fill="#5D7179" font-size="28" font-family="Arial, Helvetica, sans-serif">Next</text>
+  <text x="375" y="388" fill="#14B8A6" font-size="54" font-family="Arial, Helvetica, sans-serif" font-weight="700">8</text>
+  <text x="630" y="332" fill="#5D7179" font-size="28" font-family="Arial, Helvetica, sans-serif">Goal</text>
+  <text x="630" y="388" fill="#F39B45" font-size="54" font-family="Arial, Helvetica, sans-serif" font-weight="700">36</text>
+  <rect x="90" y="445" width="720" height="22" rx="11" fill="#D8E9ED"/>
+  <rect x="90" y="445" width="185" height="22" rx="11" fill="#0A7B83"/>
+  <rect x="180" y="560" width="540" height="540" rx="34" fill="#FFFFFF"/>
+  <g stroke="#DCE4E8" stroke-width="4">
+    <line x1="270" y1="560" x2="270" y2="1100"/>
+    <line x1="360" y1="560" x2="360" y2="1100"/>
+    <line x1="450" y1="560" x2="450" y2="1100"/>
+    <line x1="540" y1="560" x2="540" y2="1100"/>
+    <line x1="630" y1="560" x2="630" y2="1100"/>
+    <line x1="180" y1="650" x2="720" y2="650"/>
+    <line x1="180" y1="740" x2="720" y2="740"/>
+    <line x1="180" y1="830" x2="720" y2="830"/>
+    <line x1="180" y1="920" x2="720" y2="920"/>
+    <line x1="180" y1="1010" x2="720" y2="1010"/>
+  </g>
+  <path d="M225 1055H315H405H495H585H675V965" stroke="#0A7B83" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <path d="M225 1055H315H405H495H585H675V965" stroke="#1CC9A6" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/>
+  <g>
+    <circle cx="225" cy="1055" r="34" fill="#F4A259"/>
+    <text x="212" y="1066" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">1</text>
+    <circle cx="315" cy="1055" r="34" fill="#1CC9A6"/>
+    <text x="302" y="1066" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">2</text>
+    <circle cx="405" cy="1055" r="34" fill="#1CC9A6"/>
+    <text x="392" y="1066" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">3</text>
+    <circle cx="495" cy="1055" r="34" fill="#1CC9A6"/>
+    <text x="482" y="1066" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">4</text>
+    <circle cx="585" cy="1055" r="34" fill="#1CC9A6"/>
+    <text x="572" y="1066" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">5</text>
+    <circle cx="675" cy="1055" r="34" fill="#1CC9A6"/>
+    <text x="662" y="1066" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">6</text>
+    <circle cx="675" cy="965" r="34" fill="#1CC9A6" stroke="#0A7B83" stroke-width="4"/>
+    <text x="662" y="976" fill="#10212B" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">7</text>
+    <circle cx="225" cy="875" r="34" fill="#F4A259"/>
+    <text x="200" y="886" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">12</text>
+    <circle cx="675" cy="785" r="34" fill="#F4A259"/>
+    <text x="649" y="796" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">18</text>
+    <circle cx="495" cy="695" r="34" fill="#F4A259"/>
+    <text x="469" y="706" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">21</text>
+    <circle cx="225" cy="695" r="34" fill="#F4A259"/>
+    <text x="199" y="706" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">24</text>
+    <circle cx="405" cy="605" r="34" fill="#F4A259"/>
+    <text x="379" y="616" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">27</text>
+    <circle cx="495" cy="605" r="34" fill="#F4A259"/>
+    <text x="469" y="616" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">33</text>
+    <circle cx="225" cy="605" r="34" fill="#F4A259"/>
+    <text x="199" y="616" fill="#10212B" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">36</text>
+  </g>
+  <rect x="40" y="1215" width="820" height="220" rx="42" fill="#F9FCFB"/>
+  <text x="80" y="1295" fill="#10212B" font-size="44" font-family="Arial, Helvetica, sans-serif" font-weight="700">Correct route. Keep tracing forward.</text>
+  <text x="80" y="1360" fill="#5A6A73" font-size="30" font-family="Arial, Helvetica, sans-serif">Easy mode only accepts the exact hidden route generated for this board.</text>
+  <rect x="80" y="1395" width="190" height="64" rx="24" fill="#0A7B83"/>
+  <text x="132" y="1436" fill="#FFFFFF" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">Reset</text>
+  <rect x="295" y="1395" width="190" height="64" rx="24" fill="#DDF0EE"/>
+  <text x="340" y="1436" fill="#10212B" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">Hint</text>
+  <rect x="510" y="1395" width="250" height="64" rx="24" fill="#FFFFFF" stroke="#BACFD2" stroke-width="4"/>
+  <text x="547" y="1436" fill="#10212B" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">New Puzzle</text>
+</svg>
