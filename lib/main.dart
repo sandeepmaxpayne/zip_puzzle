@@ -6,6 +6,15 @@ void main() {
   runApp(const ZipPuzzleApp());
 }
 
+enum DifficultyMode { easy, hard }
+
+extension DifficultyModeLabel on DifficultyMode {
+  String get description => switch (this) {
+        DifficultyMode.easy => 'Follow the hidden original route.',
+        DifficultyMode.hard => 'Move through any blank path and time checkpoints.',
+      };
+}
+
 class ZipPuzzleApp extends StatefulWidget {
   const ZipPuzzleApp({super.key});
 
@@ -227,9 +236,10 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
   late PuzzleBoardData _board;
   final GlobalKey _boardKey = GlobalKey();
   final math.Random _random = math.Random();
+  DifficultyMode _mode = DifficultyMode.easy;
   bool _isDragging = false;
   bool _showHint = false;
-  String _statusText = 'Start from 1, then use blanks to reach the next number.';
+  String _statusText = 'Easy mode: follow the true route from 1.';
 
   @override
   void initState() {
@@ -244,69 +254,72 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
 
     return Scaffold(
       body: SafeArea(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                theme.colorScheme.surface,
-                theme.scaffoldBackgroundColor,
-                isDark ? const Color(0xFF061017) : const Color(0xFFE2F5F0),
-              ],
-            ),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 22),
-                child: Column(
-                  children: [
-                    _buildHeader(theme, isDark),
-                    const SizedBox(height: 18),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final boardSize = math.min(
-                            constraints.maxWidth,
-                            constraints.maxHeight * 0.68,
-                          );
+        child: LayoutBuilder(
+          builder: (context, viewport) {
+            final maxContentWidth = math.min(viewport.maxWidth, 760.0);
+            final horizontalPadding = viewport.maxWidth < 420 ? 14.0 : 18.0;
+            final boardSize = math.min(
+              maxContentWidth - (horizontalPadding * 2),
+              420.0,
+            );
 
-                          return Column(
-                            children: [
-                              SizedBox(
-                                width: boardSize,
-                                height: boardSize,
-                                child: GestureDetector(
-                                  key: _boardKey,
-                                  onPanStart: (details) {
-                                    _isDragging = _startDrag(
-                                      details.globalPosition,
-                                    );
-                                  },
-                                  onPanUpdate: (details) {
-                                    if (_isDragging) {
-                                      _handlePointer(details.globalPosition);
-                                    }
-                                  },
-                                  onPanEnd: (_) => _isDragging = false,
-                                  onPanCancel: () => _isDragging = false,
-                                  child: _buildBoard(boardSize),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              _buildBottomPanel(theme),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.colorScheme.surface,
+                    theme.scaffoldBackgroundColor,
+                    isDark ? const Color(0xFF061017) : const Color(0xFFE2F5F0),
                   ],
                 ),
               ),
-            ),
-          ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  10,
+                  horizontalPadding,
+                  22,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: maxContentWidth,
+                      minHeight: viewport.maxHeight - 32,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildHeader(theme, isDark),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: boardSize,
+                          height: boardSize,
+                          child: GestureDetector(
+                            key: _boardKey,
+                            onPanStart: (details) {
+                              _isDragging = _startDrag(details.globalPosition);
+                            },
+                            onPanUpdate: (details) {
+                              if (_isDragging) {
+                                _handlePointer(details.globalPosition);
+                              }
+                            },
+                            onPanEnd: (_) => _isDragging = false,
+                            onPanCancel: () => _isDragging = false,
+                            child: _buildBoard(boardSize),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        _buildBottomPanel(theme),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -323,6 +336,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
         child: Column(
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
@@ -336,7 +350,9 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Blank cells are free. Only the shown numbers must be hit at the right step.',
+                        _mode == DifficultyMode.easy
+                            ? 'Easy mode only accepts the original hidden route.'
+                            : 'Hard mode lets you roam across blanks and time the numbered checkpoints.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.72),
                         ),
@@ -344,28 +360,70 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
                 Switch(value: isDark, onChanged: widget.onThemeChanged),
               ],
             ),
             const SizedBox(height: 18),
-            Row(
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<DifficultyMode>(
+                segments: const [
+                  ButtonSegment<DifficultyMode>(
+                    value: DifficultyMode.easy,
+                    label: Text('Easy'),
+                    icon: Icon(Icons.route_rounded),
+                  ),
+                  ButtonSegment<DifficultyMode>(
+                    value: DifficultyMode.hard,
+                    label: Text('Hard'),
+                    icon: Icon(Icons.alt_route_rounded),
+                  ),
+                ],
+                selected: {_mode},
+                onSelectionChanged: (selection) {
+                  _changeMode(selection.first);
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _mode.description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.65),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                _StatChip(
-                  label: 'Step',
-                  value: '${_board.currentStep}',
-                  color: const Color(0xFF0A7B83),
+                SizedBox(
+                  width: 150,
+                  child: _StatChip(
+                    label: 'Step',
+                    value: '${_board.currentStep}',
+                    color: const Color(0xFF0A7B83),
+                  ),
                 ),
-                const SizedBox(width: 10),
-                _StatChip(
-                  label: 'Next',
-                  value: nextTarget == null ? 'Done' : '$nextTarget',
-                  color: const Color(0xFFF4A259),
+                SizedBox(
+                  width: 150,
+                  child: _StatChip(
+                    label: 'Next',
+                    value: nextTarget == null ? 'Done' : '$nextTarget',
+                    color: const Color(0xFFF4A259),
+                  ),
                 ),
-                const SizedBox(width: 10),
-                _StatChip(
-                  label: 'Moves Left',
-                  value: stepsRemaining == null ? '0' : '$stepsRemaining',
-                  color: const Color(0xFF1CC9A6),
+                SizedBox(
+                  width: 150,
+                  child: _StatChip(
+                    label: 'Moves Left',
+                    value: stepsRemaining == null ? '0' : '$stepsRemaining',
+                    color: const Color(0xFF1CC9A6),
+                  ),
                 ),
               ],
             ),
@@ -387,7 +445,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
 
   Widget _buildBoard(double boardSize) {
     final cellSize = boardSize / gridSize;
-    final hintTarget = _showHint ? _board.nextTargetPoint : null;
+    final hintTarget = _showHint ? _board.nextHintPoint(_mode) : null;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -424,12 +482,14 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
   Widget _buildBottomPanel(ThemeData theme) {
     final isComplete = _board.isComplete;
     final nextTarget = _board.nextTargetNumber;
-    final hintTarget = _board.nextTargetPoint;
+    final hintPoint = _board.nextHintPoint(_mode);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -447,44 +507,32 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
             ),
             const SizedBox(height: 8),
             Text(
-              isComplete
-                  ? 'You reached every checkpoint and filled the whole board.'
-                  : nextTarget == null
-                      ? 'Keep filling the remaining cells.'
-                      : _showHint && hintTarget != null
-                          ? 'Hint: the next visible number is $nextTarget near row ${hintTarget.row + 1}, column ${hintTarget.col + 1}.'
-                          : 'You can travel through any blank cell, but only land on $nextTarget when its turn arrives.',
+              _helperText(isComplete, nextTarget, hintPoint),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _resetCurrentPuzzle,
-                    icon: const Icon(Icons.restart_alt_rounded),
-                    label: const Text('Reset'),
-                  ),
+                FilledButton.icon(
+                  onPressed: _resetCurrentPuzzle,
+                  icon: const Icon(Icons.restart_alt_rounded),
+                  label: const Text('Reset'),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: isComplete ? null : _toggleHint,
-                    icon: Icon(
-                      _showHint ? Icons.visibility_off_rounded : Icons.lightbulb,
-                    ),
-                    label: Text(_showHint ? 'Hide Hint' : 'Hint'),
+                FilledButton.tonalIcon(
+                  onPressed: isComplete ? null : _toggleHint,
+                  icon: Icon(
+                    _showHint ? Icons.visibility_off_rounded : Icons.lightbulb,
                   ),
+                  label: Text(_showHint ? 'Hide Hint' : 'Hint'),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _newPuzzle,
-                    icon: const Icon(Icons.auto_awesome_rounded),
-                    label: const Text('New Puzzle'),
-                  ),
+                OutlinedButton.icon(
+                  onPressed: _newPuzzle,
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                  label: const Text('New Puzzle'),
                 ),
               ],
             ),
@@ -492,6 +540,23 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
         ),
       ),
     );
+  }
+
+  String _helperText(bool isComplete, int? nextTarget, GridPoint? hintPoint) {
+    if (isComplete) {
+      return 'You reached every checkpoint and filled the whole board.';
+    }
+    if (_mode == DifficultyMode.easy) {
+      return _showHint && hintPoint != null
+          ? 'Hint: follow the highlighted next true step.'
+          : 'Easy mode only accepts the exact hidden route from the original solution.';
+    }
+    if (nextTarget == null) {
+      return 'Keep filling the remaining cells.';
+    }
+    return _showHint && hintPoint != null
+        ? 'Hint: checkpoint $nextTarget is near row ${hintPoint.row + 1}, column ${hintPoint.col + 1}.'
+        : 'Hard mode lets you travel through any blank cell, but checkpoint $nextTarget must be reached on time.';
   }
 
   bool _startDrag(Offset globalPosition) {
@@ -504,8 +569,9 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
       if (_board.cellAt(point).fixedValue == 1) {
         setState(() {
           _board.begin(point);
-          _statusText =
-              'Started at 1. Find the route to ${_board.nextTargetNumber}.';
+          _statusText = _mode == DifficultyMode.easy
+              ? 'Started at 1. Stay on the true route.'
+              : 'Started at 1. Work toward ${_board.nextTargetNumber}.';
         });
         return true;
       }
@@ -577,7 +643,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
       return;
     }
 
-    final result = _board.tryMove(point);
+    final result = _board.tryMove(point, _mode);
     if (!result.moved) {
       return;
     }
@@ -587,6 +653,8 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
         _statusText = 'Puzzle complete!';
       } else if (result.hitTarget) {
         _statusText = 'Nice. Now work toward ${_board.nextTargetNumber}.';
+      } else if (_mode == DifficultyMode.easy) {
+        _statusText = 'Correct route. Keep tracing forward.';
       } else {
         _statusText = 'Good path. Keep going.';
       }
@@ -600,11 +668,27 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
     });
   }
 
+  void _changeMode(DifficultyMode mode) {
+    if (mode == _mode) {
+      return;
+    }
+    setState(() {
+      _mode = mode;
+      _board = _board.copyReset();
+      _showHint = false;
+      _statusText = mode == DifficultyMode.easy
+          ? 'Easy mode: follow the true route from 1.'
+          : 'Hard mode: use any blank path and time each checkpoint.';
+    });
+  }
+
   void _resetCurrentPuzzle() {
     setState(() {
       _board = _board.copyReset();
       _showHint = false;
-      _statusText = 'Puzzle reset. Start again from 1.';
+      _statusText = _mode == DifficultyMode.easy
+          ? 'Puzzle reset. Follow the true route from 1.'
+          : 'Puzzle reset. Start again from 1 and plan your own path.';
     });
   }
 
@@ -612,7 +696,9 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
     setState(() {
       _board = PuzzleGenerator(_random).createBoard();
       _showHint = false;
-      _statusText = 'Fresh puzzle ready. Start from 1.';
+      _statusText = _mode == DifficultyMode.easy
+          ? 'Fresh easy puzzle ready.'
+          : 'Fresh hard puzzle ready.';
     });
   }
 }
@@ -705,32 +791,30 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.72),
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.72),
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -868,7 +952,7 @@ class PuzzleBoardData {
     cellAt(point).isVisited = true;
   }
 
-  MoveResult tryMove(GridPoint next) {
+  MoveResult tryMove(GridPoint next, DifficultyMode mode) {
     final last = path.last;
     final nextCell = cellAt(next);
     if (!_isAdjacent(last, next) || path.contains(next)) {
@@ -876,7 +960,12 @@ class PuzzleBoardData {
     }
 
     final expectedStep = currentStep + 1;
-    if (nextCell.fixedValue != null && nextCell.fixedValue != expectedStep) {
+    if (mode == DifficultyMode.easy && nextCell.solutionValue != expectedStep) {
+      return const MoveResult(moved: false, hitTarget: false);
+    }
+    if (mode == DifficultyMode.hard &&
+        nextCell.fixedValue != null &&
+        nextCell.fixedValue != expectedStep) {
       return const MoveResult(moved: false, hitTarget: false);
     }
 
@@ -903,6 +992,20 @@ class PuzzleBoardData {
     currentStep--;
   }
 
+  GridPoint? nextHintPoint(DifficultyMode mode) {
+    if (path.isEmpty) {
+      return _pointForSolutionValue(1);
+    }
+    if (mode == DifficultyMode.easy) {
+      final nextStep = currentStep + 1;
+      if (nextStep > maxStep) {
+        return null;
+      }
+      return _pointForSolutionValue(nextStep);
+    }
+    return nextTargetPoint;
+  }
+
   PuzzleBoardData copyReset() {
     final copiedGrid = grid
         .map(
@@ -921,6 +1024,18 @@ class PuzzleBoardData {
       grid: copiedGrid,
       revealedValues: List<int>.from(revealedValues),
     );
+  }
+
+  GridPoint? _pointForSolutionValue(int value) {
+    for (var row = 0; row < grid.length; row++) {
+      for (var col = 0; col < grid[row].length; col++) {
+        final cell = grid[row][col];
+        if (cell.solutionValue == value) {
+          return GridPoint(row, col);
+        }
+      }
+    }
+    return null;
   }
 
   bool _isAdjacent(GridPoint a, GridPoint b) {

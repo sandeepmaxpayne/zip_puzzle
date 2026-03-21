@@ -10,7 +10,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Blank cells are free. Only the shown numbers must be hit at the right step.'), findsOneWidget);
+    expect(find.text('Easy mode only accepts the original hidden route.'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
     expect(find.text('Hint'), findsOneWidget);
     expect(find.text('New Puzzle'), findsOneWidget);
