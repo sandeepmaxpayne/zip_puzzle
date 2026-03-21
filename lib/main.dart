@@ -195,14 +195,14 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 28),
                 Text(
-                  'Zip Puzzle',
+                  'Zip Puzzle Studio',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Use blank cells to find the next checkpoint',
+                  'An original pathfinding challenge built for this project',
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -343,7 +343,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Zip Puzzle',
+                        'Zip Puzzle Studio',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -351,14 +351,19 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                       const SizedBox(height: 4),
                       Text(
                         _mode == DifficultyMode.easy
-                            ? 'Easy mode only accepts the original hidden route.'
-                            : 'Hard mode lets you roam across blanks and time the numbered checkpoints.',
+                            ? 'Easy mode guides you through the original internal route.'
+                            : 'Hard mode turns the board into a freeform strategy maze.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.72),
                         ),
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  onPressed: _showInfoSheet,
+                  icon: const Icon(Icons.info_outline_rounded),
+                  tooltip: 'Info',
                 ),
                 const SizedBox(width: 12),
                 Switch(value: isDark, onChanged: widget.onThemeChanged),
@@ -544,19 +549,63 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
 
   String _helperText(bool isComplete, int? nextTarget, GridPoint? hintPoint) {
     if (isComplete) {
-      return 'You reached every checkpoint and filled the whole board.';
+      return 'You completed the full board using the original Zip Puzzle ruleset.';
     }
     if (_mode == DifficultyMode.easy) {
       return _showHint && hintPoint != null
-          ? 'Hint: follow the highlighted next true step.'
-          : 'Easy mode only accepts the exact hidden route from the original solution.';
+          ? 'Hint: follow the highlighted next studio path step.'
+          : 'Easy mode only accepts the exact hidden route generated for this board.';
     }
     if (nextTarget == null) {
       return 'Keep filling the remaining cells.';
     }
     return _showHint && hintPoint != null
         ? 'Hint: checkpoint $nextTarget is near row ${hintPoint.row + 1}, column ${hintPoint.col + 1}.'
-        : 'Hard mode lets you travel through any blank cell, but checkpoint $nextTarget must be reached on time.';
+        : 'Hard mode allows any blank-cell route, but checkpoint $nextTarget must still be reached on time.';
+  }
+
+  void _showInfoSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'About Zip Puzzle Studio',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This game uses an original in-house visual treatment, custom UI language, and internally generated puzzle layouts.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'It is designed as a distinct puzzle experience rather than a recreation of any third-party branded game presentation.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Copyright Appruloft',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   bool _startDrag(Offset globalPosition) {
