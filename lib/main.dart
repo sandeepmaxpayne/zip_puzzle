@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:rive/rive.dart' show RiveAnimation;
 
 void main() {
   runApp(const ZipPuzzleApp());
@@ -234,6 +236,8 @@ class ZipPuzzleHome extends StatefulWidget {
 
 class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
   static const int gridSize = 6;
+  static const String _completionRiveAsset =
+      'assets/animations/congrats_ribbons.riv';
 
   late PuzzleBoardData _board;
   final GlobalKey _boardKey = GlobalKey();
@@ -241,6 +245,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
   DifficultyMode _mode = DifficultyMode.easy;
   bool _isDragging = false;
   bool _showHint = false;
+  bool _hasShownCompletionDialog = false;
   String _statusText = 'Easy mode: follow the true route from 1.';
 
   @override
@@ -261,7 +266,10 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
             final maxContentWidth = math.min(viewport.maxWidth, 760.0);
             final horizontalPadding = viewport.maxWidth < 420 ? 14.0 : 18.0;
             final boardSize = math.min(
-              maxContentWidth - (horizontalPadding * 2),
+              math.min(
+                maxContentWidth - (horizontalPadding * 2),
+                viewport.maxHeight * (viewport.maxHeight < 760 ? 0.38 : 0.45),
+              ),
               420.0,
             );
 
@@ -277,44 +285,47 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                   ],
                 ),
               ),
-              child: SingleChildScrollView(
+              child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   horizontalPadding,
                   10,
                   horizontalPadding,
-                  22,
+                  16,
                 ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: maxContentWidth,
-                      minHeight: viewport.maxHeight - 32,
+                      minHeight: viewport.maxHeight - 26,
+                      maxHeight: viewport.maxHeight - 26,
                     ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         _buildHeader(theme, isDark),
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          width: boardSize,
-                          height: boardSize,
-                          child: GestureDetector(
-                            key: _boardKey,
-                            onPanStart: (details) {
-                              _isDragging = _startDrag(details.globalPosition);
-                            },
-                            onPanUpdate: (details) {
-                              if (_isDragging) {
-                                _handlePointer(details.globalPosition);
-                              }
-                            },
-                            onPanEnd: (_) => _isDragging = false,
-                            onPanCancel: () => _isDragging = false,
-                            child: _buildBoard(boardSize),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: Center(
+                            child: SizedBox(
+                              width: boardSize,
+                              height: boardSize,
+                              child: Listener(
+                                key: _boardKey,
+                                behavior: HitTestBehavior.opaque,
+                                onPointerDown: (event) {
+                                  _isDragging = _startDrag(event.position);
+                                },
+                                onPointerMove: (event) {
+                                  if (_isDragging) {
+                                    _handlePointer(event.position);
+                                  }
+                                },
+                                onPointerUp: (_) => _isDragging = false,
+                                onPointerCancel: (_) => _isDragging = false,
+                                child: _buildBoard(boardSize),
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 18),
-                        _buildBottomPanel(theme),
                       ],
                     ),
                   ),
@@ -334,7 +345,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
@@ -371,7 +382,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                 Switch(value: isDark, onChanged: widget.onThemeChanged),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<DifficultyMode>(
@@ -393,7 +404,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                 },
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -403,21 +414,13 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
                 SizedBox(
-                  width: 150,
-                  child: _StatChip(
-                    label: 'Step',
-                    value: '${_board.currentStep}',
-                    color: const Color(0xFF0A7B83),
-                  ),
-                ),
-                SizedBox(
-                  width: 150,
+                  width: 165,
                   child: _StatChip(
                     label: 'Next',
                     value: nextTarget == null ? 'Done' : '$nextTarget',
@@ -425,20 +428,20 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                   ),
                 ),
                 SizedBox(
-                  width: 150,
-                  child: _StatChip(
-                    label: 'Moves Left',
+                  width: 185,
+                  child: _MovesStatChip(
                     value: stepsRemaining == null ? '0' : '$stepsRemaining',
                     color: const Color(0xFF1CC9A6),
+                    onPressed: _showGamePanel,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
-                minHeight: 11,
+                minHeight: 9,
                 value: progress.clamp(0.0, 1.0).toDouble(),
                 backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
                 color: theme.colorScheme.primary,
@@ -468,12 +471,16 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                 child: Row(
                   children: List.generate(gridSize, (col) {
                     final point = GridPoint(row, col);
+                    final visitedStep = _board.visitedStepFor(point);
                     return Expanded(
                       child: _PuzzleCellWidget(
                         cell: _board.grid[row][col],
                         isEndpoint:
                             _board.path.isNotEmpty && _board.path.last == point,
                         isHintTarget: hintTarget == point,
+                        displayValue: _displayValueForCell(visitedStep, point),
+                        usesPathStyle:
+                            _mode == DifficultyMode.easy && visitedStep != null,
                       ),
                     );
                   }),
@@ -549,6 +556,62 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showGamePanel() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+            child: _buildBottomPanel(Theme.of(context)),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCompletionDialog() async {
+    if (!mounted || _hasShownCompletionDialog) {
+      return;
+    }
+    _hasShownCompletionDialog = true;
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Puzzle complete',
+      barrierColor: Colors.black.withOpacity(0.45),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curve = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        );
+        return Transform.scale(
+          scale: Tween<double>(begin: 0.88, end: 1).evaluate(curve),
+          child: Opacity(
+            opacity: animation.value,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _CompletionDialog(
+                  riveAsset: _completionRiveAsset,
+                  onPlayAgain: () {
+                    Navigator.of(context).pop();
+                    _newPuzzle();
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -765,8 +828,10 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
 
     if (_board.canBacktrackTo(point)) {
       setState(() {
+        final removedStep = _board.currentStep;
         _board.backtrack();
-        _statusText = 'Backtracked one step.';
+        _statusText =
+            'Reversed step $removedStep. Moves left restored to ${_board.stepsUntilNextTarget ?? 0}.';
       });
       return;
     }
@@ -787,6 +852,12 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
         _statusText = 'Good path. Keep going.';
       }
     });
+
+    if (_board.isComplete) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showCompletionDialog();
+      });
+    }
   }
 
   void _toggleHint() {
@@ -804,6 +875,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
       _mode = mode;
       _board = _board.copyReset();
       _showHint = false;
+      _hasShownCompletionDialog = false;
       _statusText = mode == DifficultyMode.easy
           ? 'Easy mode: follow the true route from 1.'
           : 'Hard mode: use any blank path and time each checkpoint.';
@@ -814,6 +886,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
     setState(() {
       _board = _board.copyReset();
       _showHint = false;
+      _hasShownCompletionDialog = false;
       _statusText = _mode == DifficultyMode.easy
           ? 'Puzzle reset. Follow the true route from 1.'
           : 'Puzzle reset. Start again from 1 and plan your own path.';
@@ -824,10 +897,18 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
     setState(() {
       _board = PuzzleGenerator(_random).createBoard();
       _showHint = false;
+      _hasShownCompletionDialog = false;
       _statusText = _mode == DifficultyMode.easy
           ? 'Fresh easy puzzle ready.'
           : 'Fresh hard puzzle ready.';
     });
+  }
+
+  int? _displayValueForCell(int? visitedStep, GridPoint point) {
+    if (_mode == DifficultyMode.easy && visitedStep != null) {
+      return visitedStep;
+    }
+    return _board.cellAt(point).fixedValue;
   }
 }
 
@@ -836,19 +917,25 @@ class _PuzzleCellWidget extends StatelessWidget {
     required this.cell,
     required this.isEndpoint,
     required this.isHintTarget,
+    required this.displayValue,
+    required this.usesPathStyle,
   });
 
   final PuzzleCell cell;
   final bool isEndpoint;
   final bool isHintTarget;
+  final int? displayValue;
+  final bool usesPathStyle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final background = cell.fixedValue != null
-        ? const Color(0xFFF4A259).withOpacity(isDark ? 0.22 : 0.18)
+    final background = displayValue != null
+        ? (usesPathStyle
+              ? const Color(0xFF1CC9A6).withOpacity(isDark ? 0.24 : 0.16)
+              : const Color(0xFFF4A259).withOpacity(isDark ? 0.22 : 0.18))
         : cell.isVisited
         ? const Color(0xFF1CC9A6).withOpacity(isDark ? 0.22 : 0.14)
         : Colors.transparent;
@@ -867,21 +954,26 @@ class _PuzzleCellWidget extends StatelessWidget {
       child: Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          width: isEndpoint || cell.fixedValue != null ? 40 : 18,
-          height: isEndpoint || cell.fixedValue != null ? 40 : 18,
+          width: isEndpoint || displayValue != null ? 40 : 18,
+          height: isEndpoint || displayValue != null ? 40 : 18,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: cell.fixedValue != null
-                ? const Color(0xFFF4A259)
+            color: displayValue != null
+                ? (usesPathStyle
+                      ? const Color(0xFF1CC9A6)
+                      : const Color(0xFFF4A259))
                 : isEndpoint
                 ? const Color(0xFF1CC9A6)
                 : cell.isVisited
                 ? const Color(0xFF1CC9A6).withOpacity(0.75)
                 : Colors.transparent,
-            boxShadow: cell.fixedValue != null || isHintTarget
+            boxShadow: displayValue != null || isHintTarget
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFF4A259).withOpacity(0.24),
+                      color: (usesPathStyle
+                              ? const Color(0xFF1CC9A6)
+                              : const Color(0xFFF4A259))
+                          .withOpacity(0.24),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -889,12 +981,12 @@ class _PuzzleCellWidget extends StatelessWidget {
                 : const [],
           ),
           alignment: Alignment.center,
-          child: cell.fixedValue == null
+          child: displayValue == null
               ? null
               : Text(
-                  '${cell.fixedValue}',
+                  '$displayValue',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF10212B),
+                    color: usesPathStyle ? Colors.white : const Color(0xFF10212B),
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -945,6 +1037,299 @@ class _StatChip extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _MovesStatChip extends StatelessWidget {
+  const _MovesStatChip({
+    required this.value,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String value;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Moves Left',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.72),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            onPressed: onPressed,
+            icon: const Icon(Icons.tune_rounded),
+            tooltip: 'Open game actions',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletionDialog extends StatefulWidget {
+  const _CompletionDialog({
+    required this.riveAsset,
+    required this.onPlayAgain,
+  });
+
+  final String riveAsset;
+  final VoidCallback onPlayAgain;
+
+  @override
+  State<_CompletionDialog> createState() => _CompletionDialogState();
+}
+
+class _CompletionDialogState extends State<_CompletionDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 30,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 180,
+              child: _CompletionRiveView(assetName: widget.riveAsset),
+            ),
+            const SizedBox(height: 12),
+            AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: Tween<double>(begin: 0.98, end: 1.03).evaluate(
+                    CurvedAnimation(
+                      parent: _pulseController,
+                      curve: Curves.easeInOut,
+                    ),
+                  ),
+                  child: child,
+                );
+              },
+              child: Text(
+                'Congratulations!',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You solved the full puzzle successfully.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.72),
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: widget.onPlayAgain,
+                icon: const Icon(Icons.auto_awesome_rounded),
+                label: const Text('Play Again'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompletionRiveView extends StatelessWidget {
+  const _CompletionRiveView({required this.assetName});
+
+  final String assetName;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ByteData>(
+      future: rootBundle.load(assetName),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasData) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: RiveAnimation.asset(
+              assetName,
+              fit: BoxFit.cover,
+            ),
+          );
+        }
+        return const _CompletionFallbackArt();
+      },
+    );
+  }
+}
+
+class _CompletionFallbackArt extends StatefulWidget {
+  const _CompletionFallbackArt();
+
+  @override
+  State<_CompletionFallbackArt> createState() => _CompletionFallbackArtState();
+}
+
+class _CompletionFallbackArtState extends State<_CompletionFallbackArt>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _RibbonFallbackPainter(progress: _controller.value),
+          child: const SizedBox.expand(),
+        );
+      },
+    );
+  }
+}
+
+class _RibbonFallbackPainter extends CustomPainter {
+  _RibbonFallbackPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final background = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFECFFFB), Color(0xFFD6F6F0), Color(0xFFFFF1DA)],
+      ).createShader(rect);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(24)),
+      background,
+    );
+
+    final ribbonColors = [
+      const Color(0xFF1CC9A6),
+      const Color(0xFFF4A259),
+      const Color(0xFF0A7B83),
+    ];
+    for (var i = 0; i < 9; i++) {
+      final dx = (size.width / 10) * (i + 1);
+      final swing = math.sin((progress * math.pi * 2) + (i * 0.45)) * 10;
+      final path = Path()
+        ..moveTo(dx, -10)
+        ..quadraticBezierTo(dx + swing, size.height * 0.28, dx - swing * 0.5,
+            size.height * 0.62)
+        ..quadraticBezierTo(dx + swing * 0.7, size.height * 0.82, dx,
+            size.height + 10);
+
+      final ribbonPaint = Paint()
+        ..color = ribbonColors[i % ribbonColors.length].withOpacity(0.85)
+        ..strokeWidth = 8
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      canvas.drawPath(path, ribbonPaint);
+    }
+
+    final badgePaint = Paint()..color = const Color(0xFFFFD166);
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height * 0.46),
+      28 + (math.sin(progress * math.pi * 2) * 2),
+      badgePaint,
+    );
+    final checkPaint = Paint()
+      ..color = const Color(0xFF0A7B83)
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final check = Path()
+      ..moveTo(size.width / 2 - 12, size.height * 0.46)
+      ..lineTo(size.width / 2 - 2, size.height * 0.46 + 10)
+      ..lineTo(size.width / 2 + 14, size.height * 0.46 - 8);
+    canvas.drawPath(check, checkPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RibbonFallbackPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 
@@ -1150,6 +1535,14 @@ class PuzzleBoardData {
       grid: copiedGrid,
       revealedValues: List<int>.from(revealedValues),
     );
+  }
+
+  int? visitedStepFor(GridPoint point) {
+    final index = path.indexOf(point);
+    if (index == -1) {
+      return null;
+    }
+    return index + 1;
   }
 
   GridPoint? _pointForSolutionValue(int value) {
