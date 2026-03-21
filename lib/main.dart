@@ -574,6 +574,44 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
     );
   }
 
+  Future<void> _showHardHintDialog(GridPoint hintPoint, int? nextTarget) async {
+    if (!mounted) {
+      return;
+    }
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Next move hint',
+      barrierColor: Colors.black.withOpacity(0.35),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _HintPreviewDialog(
+                  row: hintPoint.row + 1,
+                  col: hintPoint.col + 1,
+                  nextTarget: nextTarget,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showCompletionDialog() async {
     if (!mounted || _hasShownCompletionDialog) {
       return;
@@ -861,6 +899,30 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
   }
 
   void _toggleHint() {
+    final hintPoint = _board.nextHintPoint(_mode);
+    if (_mode == DifficultyMode.hard) {
+      if (_showHint) {
+        setState(() {
+          _showHint = false;
+          _statusText = 'Hint hidden.';
+        });
+        return;
+      }
+      if (hintPoint == null) {
+        setState(() {
+          _statusText = 'No hint available right now.';
+        });
+        return;
+      }
+      setState(() {
+        _showHint = true;
+        _statusText =
+            'Hint highlighted at row ${hintPoint.row + 1}, column ${hintPoint.col + 1}.';
+      });
+      _showHardHintDialog(hintPoint, _board.nextTargetNumber);
+      return;
+    }
+
     setState(() {
       _showHint = !_showHint;
       _statusText = _showHint ? 'Hint enabled.' : 'Hint hidden.';
@@ -873,7 +935,7 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
     }
     setState(() {
       _mode = mode;
-      _board = _board.copyReset();
+      _board = PuzzleGenerator(_random).createBoard();
       _showHint = false;
       _hasShownCompletionDialog = false;
       _statusText = mode == DifficultyMode.easy
@@ -1190,6 +1252,151 @@ class _CompletionDialogState extends State<_CompletionDialog>
                 onPressed: widget.onPlayAgain,
                 icon: const Icon(Icons.auto_awesome_rounded),
                 label: const Text('Play Again'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HintPreviewDialog extends StatefulWidget {
+  const _HintPreviewDialog({
+    required this.row,
+    required this.col,
+    required this.nextTarget,
+  });
+
+  final int row;
+  final int col;
+  final int? nextTarget;
+
+  @override
+  State<_HintPreviewDialog> createState() => _HintPreviewDialogState();
+}
+
+class _HintPreviewDialogState extends State<_HintPreviewDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 360),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.16),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: Tween<double>(begin: 0.96, end: 1.05).evaluate(
+                    CurvedAnimation(
+                      parent: _controller,
+                      curve: Curves.easeInOut,
+                    ),
+                  ),
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 92,
+                height: 92,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4A259).withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4A259),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF4A259).withOpacity(0.28),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.ads_click_rounded,
+                      color: theme.colorScheme.onSurface,
+                      size: 30,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Next Move Hint',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.nextTarget == null
+                  ? 'Head toward the highlighted next playable cell.'
+                  : 'Try the highlighted cell for checkpoint ${widget.nextTarget}.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.72),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1CC9A6).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                'Highlight shown at row ${widget.row}, column ${widget.col}.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: const Color(0xFF0A7B83),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
