@@ -1,0 +1,62 @@
+name: Build Release APK
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - output/**
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Copy APK to output
+        run: |
+          mkdir -p output
+          cp build/app/outputs/flutter-apk/app-release.apk output/zip-puzzle-studio-release.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zip-puzzle-studio-release-apk
+          path: output/zip-puzzle-studio-release.apk
+
+      - name: Commit APK to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/zip-puzzle-studio-release.apk
+          if git diff --cached --quiet; then
+            echo "No APK changes to commit."
+            exit 0
+          fi
+          git commit -m "[skip ci] Add release APK"
+          git push
