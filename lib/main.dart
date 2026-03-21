@@ -600,6 +600,80 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 16),
+                FilledButton.tonalIcon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _showPrivacySheet();
+                  },
+                  icon: const Icon(Icons.privacy_tip_outlined),
+                  label: const Text('Privacy Policy'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPrivacySheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Privacy Policy',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Zip Puzzle Studio by Appruloft is designed as a general-audience puzzle game.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'This app is intended to run locally and does not require account creation to play.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Based on the current implementation in this project, Appruloft does not intentionally collect, store, or share personal data from players inside the app experience.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'If future versions add analytics, ads, sign-in, cloud saves, payments, or crash reporting, the Play Console Data safety form and this privacy policy should be updated before release.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Data retention: no player profile or personal data retention is described for this local-only version.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Contact: Appruloft should provide a public support email and hosted privacy-policy URL in the Google Play Console before publishing.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Copyright Appruloft',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
