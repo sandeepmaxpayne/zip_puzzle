@@ -10,9 +10,9 @@ enum DifficultyMode { easy, hard }
 
 extension DifficultyModeLabel on DifficultyMode {
   String get description => switch (this) {
-        DifficultyMode.easy => 'Follow the hidden original route.',
-        DifficultyMode.hard => 'Move through any blank path and time checkpoints.',
-      };
+    DifficultyMode.easy => 'Follow the hidden original route.',
+    DifficultyMode.hard => 'Move through any blank path and time checkpoints.',
+  };
 }
 
 class ZipPuzzleApp extends StatefulWidget {
@@ -74,14 +74,16 @@ class _ZipPuzzleAppState extends State<ZipPuzzleApp> {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor:
-          isDark ? const Color(0xFF08131B) : const Color(0xFFF4F7F8),
+      scaffoldBackgroundColor: isDark
+          ? const Color(0xFF08131B)
+          : const Color(0xFFF4F7F8),
       textTheme: ThemeData(brightness: brightness).textTheme.apply(
-            bodyColor: isDark ? const Color(0xFFE9F4F1) : const Color(0xFF10212B),
-            displayColor:
-                isDark ? const Color(0xFFE9F4F1) : const Color(0xFF10212B),
-          ),
-      cardTheme: CardTheme(
+        bodyColor: isDark ? const Color(0xFFE9F4F1) : const Color(0xFF10212B),
+        displayColor: isDark
+            ? const Color(0xFFE9F4F1)
+            : const Color(0xFF10212B),
+      ),
+      cardTheme: CardThemeData(
         color: isDark ? const Color(0xFF11232E) : Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -152,10 +154,10 @@ class _SplashScreenState extends State<SplashScreen>
                 curve: Curves.easeOutCubic,
               );
               return Opacity(
-                opacity: Tween<double>(begin: 0, end: 1)
-                    .evaluate(curve)
-                    .clamp(0.0, 1.0)
-                    .toDouble(),
+                opacity: Tween<double>(
+                  begin: 0,
+                  end: 1,
+                ).evaluate(curve).clamp(0.0, 1.0).toDouble(),
                 child: Transform.scale(
                   scale: Tween<double>(begin: 0.72, end: 1).evaluate(curve),
                   child: child,
@@ -507,7 +509,10 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
                   ),
                 ),
                 if (isComplete)
-                  const Icon(Icons.celebration_rounded, color: Color(0xFFF4A259)),
+                  const Icon(
+                    Icons.celebration_rounded,
+                    color: Color(0xFFF4A259),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -845,14 +850,14 @@ class _PuzzleCellWidget extends StatelessWidget {
     final background = cell.fixedValue != null
         ? const Color(0xFFF4A259).withOpacity(isDark ? 0.22 : 0.18)
         : cell.isVisited
-            ? const Color(0xFF1CC9A6).withOpacity(isDark ? 0.22 : 0.14)
-            : Colors.transparent;
+        ? const Color(0xFF1CC9A6).withOpacity(isDark ? 0.22 : 0.14)
+        : Colors.transparent;
 
     final borderColor = isHintTarget
         ? const Color(0xFFF4A259)
         : isEndpoint
-            ? theme.colorScheme.primary
-            : theme.dividerColor.withOpacity(isDark ? 0.22 : 0.16);
+        ? theme.colorScheme.primary
+        : theme.dividerColor.withOpacity(isDark ? 0.22 : 0.16);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -869,10 +874,10 @@ class _PuzzleCellWidget extends StatelessWidget {
             color: cell.fixedValue != null
                 ? const Color(0xFFF4A259)
                 : isEndpoint
-                    ? const Color(0xFF1CC9A6)
-                    : cell.isVisited
-                        ? const Color(0xFF1CC9A6).withOpacity(0.75)
-                        : Colors.transparent,
+                ? const Color(0xFF1CC9A6)
+                : cell.isVisited
+                ? const Color(0xFF1CC9A6).withOpacity(0.75)
+                : Colors.transparent,
             boxShadow: cell.fixedValue != null || isHintTarget
                 ? [
                     BoxShadow(
@@ -961,8 +966,9 @@ class PuzzleGenerator {
       return List.generate(gridSize, (col) {
         final point = GridPoint(row, col);
         final solutionValue = solutionMap[point]!;
-        final fixedValue =
-            revealValues.contains(solutionValue) ? solutionValue : null;
+        final fixedValue = revealValues.contains(solutionValue)
+            ? solutionValue
+            : null;
         return PuzzleCell(solutionValue: solutionValue, fixedValue: fixedValue);
       });
     });
@@ -1021,10 +1027,7 @@ class PuzzleGenerator {
 }
 
 class PuzzleBoardData {
-  PuzzleBoardData({
-    required this.grid,
-    required this.revealedValues,
-  });
+  PuzzleBoardData({required this.grid, required this.revealedValues});
 
   static const int maxStep = 36;
 
@@ -1176,10 +1179,7 @@ class MoveResult {
 }
 
 class PuzzleCell {
-  PuzzleCell({
-    required this.solutionValue,
-    required this.fixedValue,
-  });
+  PuzzleCell({required this.solutionValue, required this.fixedValue});
 
   final int solutionValue;
   final int? fixedValue;
