@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "343650775749",
+    "project_id": "zip-puzzle-f8120",
+    "storage_bucket": "zip-puzzle-f8120.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:343650775749:android:79e0a22147c99eb1fab6ac",
+        "android_client_info": {
+          "package_name": "com.appruloft.zip_puzzle.zip_puzzle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYbA6jfh2JL4UZvsUcMl9rXNdAzFuRQpY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

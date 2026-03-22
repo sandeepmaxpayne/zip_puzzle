@@ -1,18 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zip_puzzle/main.dart';
+import 'package:zip_puzzle/app.dart';
 
 void main() {
-  testWidgets('zip puzzle home loads after splash', (tester) async {
+  testWidgets('auth screen loads after splash when signed out', (tester) async {
     await tester.pumpWidget(const ZipPuzzleApp());
 
-    expect(find.text('Zip Puzzle Studio'), findsOneWidget);
+    expect(find.text('Zip Puzzle'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 2700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Easy mode guides you through the original internal route.'), findsOneWidget);
-    expect(find.text('Reset'), findsOneWidget);
-    expect(find.text('Hint'), findsOneWidget);
-    expect(find.text('New Puzzle'), findsOneWidget);
+    expect(find.text('Choose how you want to play'), findsOneWidget);
+    expect(find.text('Continue With Google'), findsOneWidget);
   });
 }
