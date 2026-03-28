@@ -77,11 +77,22 @@ class _ClassicPuzzleScreenState extends State<ClassicPuzzleScreen> {
     if (point == null) {
       return false;
     }
-    final started = _board.begin(point);
-    if (started) {
-      setState(() => _showHint = false);
+    var handled = false;
+    setState(() {
+      _showHint = false;
+      if (_board.path.isEmpty) {
+        handled = _board.begin(point);
+      } else if (_board.canRewindTo(point)) {
+        _board.rewindTo(point);
+        handled = true;
+      } else {
+        handled = _board.tryMove(point);
+      }
+    });
+    if (handled && _board.isComplete && !_completionHandled) {
+      _handleCompletion();
     }
-    return started;
+    return handled;
   }
 
   void _handlePointer(Offset globalPosition) {
@@ -92,8 +103,8 @@ class _ClassicPuzzleScreenState extends State<ClassicPuzzleScreen> {
     var shouldHandleCompletion = false;
     setState(() {
       _showHint = false;
-      if (_board.canBacktrackTo(point)) {
-        _board.backtrack();
+      if (_board.canRewindTo(point)) {
+        _board.rewindTo(point);
       } else {
         _board.tryMove(point);
       }
@@ -175,7 +186,10 @@ class _ClassicPuzzleScreenState extends State<ClassicPuzzleScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hint = _showHint ? _board.nextHintPoint : null;
-    final totalScore = AppScope.of(context).progress.totalScore;
+    final nextAnchor = _board.nextAnchorValue;
+    final filledCount = _board.currentStep;
+    final totalCount = _definition.size * _definition.size;
+    final movesLeft = totalCount - filledCount;
     return Scaffold(
       appBar: AppBar(
         title: Text('Classic Day ${widget.args.day}'),
@@ -226,39 +240,66 @@ class _ClassicPuzzleScreenState extends State<ClassicPuzzleScreen> {
                     ),
                     child: Column(
                       children: [
-                        SegmentedButton<ClassicDifficulty>(
-                          segments: ClassicDifficulty.values
-                              .map(
-                                (difficulty) => ButtonSegment<ClassicDifficulty>(
-                                  value: difficulty,
-                                  label: Text(difficulty.label),
-                                ),
-                              )
-                              .toList(),
-                          selected: {_difficulty},
-                          onSelectionChanged: (selection) {
-                            _changeDifficulty(selection.first);
-                          },
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SegmentedButton<ClassicDifficulty>(
+                            segments: ClassicDifficulty.values
+                                .map(
+                                  (difficulty) =>
+                                      ButtonSegment<ClassicDifficulty>(
+                                        value: difficulty,
+                                        label: Text(difficulty.label),
+                                      ),
+                                )
+                                .toList(),
+                            selected: {_difficulty},
+                            onSelectionChanged: (selection) {
+                              _changeDifficulty(selection.first);
+                            },
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _ClassicStatChip(
-                                icon: Icons.stars_rounded,
-                                label: 'Your Score',
-                                value: '$totalScore',
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _ClassicStatChip(
-                                icon: Icons.add_circle_outline_rounded,
-                                label: 'Win Reward',
-                                value: '+5',
-                              ),
-                            ),
-                          ],
+                        LayoutBuilder(
+                          builder: (context, chipConstraints) {
+                            final maxWidth = chipConstraints.maxWidth;
+                            final chipWidth =
+                                maxWidth > 360
+                                    ? (maxWidth - 20) / 3
+                                    : (maxWidth - 10) / 2;
+                            return Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                SizedBox(
+                                  width: chipWidth,
+                                  child: _ClassicStatChip(
+                                    icon: Icons.timeline_rounded,
+                                    label: 'Moves Left',
+                                    value: '$movesLeft',
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: chipWidth,
+                                  child: _ClassicStatChip(
+                                    icon: Icons.grid_view_rounded,
+                                    label: 'Filled',
+                                    value: '$filledCount/$totalCount',
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: chipWidth,
+                                  child: _ClassicStatChip(
+                                    icon: Icons.flag_rounded,
+                                    label: 'Next',
+                                    value:
+                                        nextAnchor == null
+                                            ? 'Finish'
+                                            : '$nextAnchor',
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -311,7 +352,15 @@ class _ClassicPuzzleScreenState extends State<ClassicPuzzleScreen> {
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              _difficulty.flavor,
+                              _board.isComplete
+                                  ? (_definition.usesFixedRoute
+                                      ? 'Route completed exactly from 1 to ${_definition.size * _definition.size}.'
+                                      : 'Board completed from 1 to ${_definition.size * _definition.size} with every cell covered.')
+                                  : _definition.usesFixedRoute
+                                  ? (nextAnchor == null
+                                      ? 'Finish the remaining cells in order without breaking the route.'
+                                      : 'Easy mode follows the original route exactly, with numbered guides along the way.')
+                                  : 'Medium and hard let you enter any blank cell to the right, up, or down. Cover every cell, and drag back through your trail to rewind.',
                               style: (compact
                                       ? theme.textTheme.bodyMedium
                                       : theme.textTheme.titleSmall)
@@ -403,12 +452,16 @@ class _ClassicStatChip extends StatelessWidget {
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: const Color(0xFF153936).withValues(alpha: 0.7),
                   ),
                 ),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: const Color(0xFF153936),
                     fontWeight: FontWeight.w800,
@@ -508,8 +561,13 @@ class _ClassicPuzzleBoardView extends StatelessWidget {
                       children: List.generate(definition.size, (col) {
                         final point = ClassicPoint(row, col);
                         final anchorValue = definition.anchorValueFor(point);
-                        final isVisited = board.path.contains(point);
+                        final visitedStep = board.visitedStepFor(point);
+                        final displayValue = visitedStep ?? anchorValue;
+                        final isVisited = visitedStep != null;
+                        final isAnchor = anchorValue != null;
                         final isHint = hintPoint == point;
+                        final isCurrent =
+                            board.path.isNotEmpty && board.path.last == point;
                         return Expanded(
                           child: Container(
                             decoration: BoxDecoration(
@@ -524,28 +582,42 @@ class _ClassicPuzzleBoardView extends StatelessWidget {
                               ),
                             ),
                             child: Center(
-                              child: anchorValue == null
+                              child: displayValue == null
                                   ? const SizedBox.shrink()
-                                  : Container(
-                                      width: cell * 0.46,
-                                      height: cell * 0.46,
+                                  : AnimatedContainer(
+                                      duration: const Duration(milliseconds: 140),
+                                      curve: Curves.easeOut,
+                                      width: isVisited ? cell * 0.62 : cell * 0.5,
+                                      height: isVisited ? cell * 0.62 : cell * 0.5,
                                       decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.black,
+                                        borderRadius: BorderRadius.circular(
+                                          isVisited ? 14 : 999,
+                                        ),
+                                        color: isCurrent
+                                            ? const Color(0xFF0A80D8)
+                                            : isAnchor
+                                            ? const Color(0xFF101818)
+                                            : Colors.white.withValues(alpha: 0.94),
                                         border: Border.all(
-                                          color: board.path.isNotEmpty &&
-                                                  board.path.last == point
-                                              ? const Color(0xFF08B6F3)
-                                              : Colors.transparent,
-                                          width: 4,
+                                          color: isCurrent
+                                              ? const Color(0xFF8BE3FF)
+                                              : isVisited
+                                              ? const Color(0xFF7AC8E8)
+                                              : const Color(0xFF101818).withValues(
+                                                  alpha: 0.14,
+                                                ),
+                                          width: isCurrent ? 3 : 1.4,
                                         ),
                                       ),
                                       alignment: Alignment.center,
                                       child: Text(
-                                        '$anchorValue',
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        '$displayValue',
+                                        style: TextStyle(
+                                          color: (isAnchor || isCurrent)
+                                              ? Colors.white
+                                              : const Color(0xFF153936),
                                           fontWeight: FontWeight.w800,
+                                          fontSize: cell * 0.18,
                                         ),
                                       ),
                                     ),
@@ -577,18 +649,27 @@ class ClassicPuzzleFactory {
       ClassicDifficulty.hard => 6,
     };
     final random = math.Random((year * 1000) + (day * 13) + difficulty.index);
-    final path = _applyTransform(_buildSerpentine(size), size, random.nextInt(8));
+    final path = difficulty == ClassicDifficulty.easy
+        ? _applyTransform(_buildSerpentine(size), size, random.nextInt(8))
+        : _buildColumnSweep(size);
     final anchorCounts = <ClassicDifficulty, int>{
       ClassicDifficulty.easy: math.max(6, size + 3),
       ClassicDifficulty.medium: math.max(5, size),
       ClassicDifficulty.hard: 4,
     };
-    final revealValues = <int>{1, size * size};
-    final candidates = List<int>.generate((size * size) - 2, (index) => index + 2)
-      ..shuffle(random);
-    revealValues.addAll(candidates.take(anchorCounts[difficulty]! - 2));
+    final revealValues = difficulty == ClassicDifficulty.easy
+        ? <int>{1, size * size}
+        : <int>{1};
+    if (difficulty == ClassicDifficulty.easy) {
+      final candidates = List<int>.generate(
+        (size * size) - 2,
+        (index) => index + 2,
+      )..shuffle(random);
+      revealValues.addAll(candidates.take(anchorCounts[difficulty]! - 2));
+    }
 
     return ClassicPuzzleDefinition(
+      difficulty: difficulty,
       size: size,
       solutionPath: path,
       anchorValues: revealValues,
@@ -604,6 +685,22 @@ class ClassicPuzzleFactory {
         }
       } else {
         for (var col = size - 1; col >= 0; col--) {
+          result.add(ClassicPoint(row, col));
+        }
+      }
+    }
+    return result;
+  }
+
+  static List<ClassicPoint> _buildColumnSweep(int size) {
+    final result = <ClassicPoint>[];
+    for (var col = 0; col < size; col++) {
+      if (col.isEven) {
+        for (var row = 0; row < size; row++) {
+          result.add(ClassicPoint(row, col));
+        }
+      } else {
+        for (var row = size - 1; row >= 0; row--) {
           result.add(ClassicPoint(row, col));
         }
       }
@@ -643,14 +740,18 @@ class ClassicPuzzleFactory {
 
 class ClassicPuzzleDefinition {
   ClassicPuzzleDefinition({
+    required this.difficulty,
     required this.size,
     required this.solutionPath,
     required Set<int> anchorValues,
   }) : anchorValues = anchorValues.toSet();
 
+  final ClassicDifficulty difficulty;
   final int size;
   final List<ClassicPoint> solutionPath;
   final Set<int> anchorValues;
+
+  bool get usesFixedRoute => difficulty == ClassicDifficulty.easy;
 
   int? anchorValueFor(ClassicPoint point) {
     final index = solutionPath.indexOf(point);
@@ -658,6 +759,9 @@ class ClassicPuzzleDefinition {
       return null;
     }
     final value = index + 1;
+    if (!usesFixedRoute) {
+      return value == 1 ? 1 : null;
+    }
     return anchorValues.contains(value) ? value : null;
   }
 
@@ -671,10 +775,28 @@ class ClassicPuzzleBoard {
   final List<ClassicPoint> path = <ClassicPoint>[];
 
   bool get isComplete => path.length == definition.solutionPath.length;
+  int get currentStep => path.length;
+  int? get nextAnchorValue {
+    if (!definition.usesFixedRoute) {
+      final nextStep = currentStep + 1;
+      return nextStep > definition.solutionPath.length ? null : nextStep;
+    }
+    final anchors = definition.anchorValues.toList()..sort();
+    for (final value in anchors) {
+      if (value > currentStep) {
+        return value;
+      }
+    }
+    return null;
+  }
 
   ClassicPoint? get nextHintPoint {
     if (path.isEmpty) {
       return definition.pointForStep(1);
+    }
+    if (!definition.usesFixedRoute) {
+      final candidates = _candidateMoves(path.last);
+      return candidates.isEmpty ? null : candidates.first;
     }
     final nextStep = path.length + 1;
     if (nextStep > definition.solutionPath.length) {
@@ -700,16 +822,37 @@ class ClassicPuzzleBoard {
     if (!_isAdjacent(path.last, point)) {
       return false;
     }
-    final nextExpected = definition.pointForStep(path.length + 1);
-    if (nextExpected != point) {
+    if (!_isAllowedDirection(path.last, point)) {
       return false;
+    }
+    if (definition.usesFixedRoute) {
+      final nextExpected = definition.pointForStep(path.length + 1);
+      if (nextExpected != point) {
+        return false;
+      }
     }
     path.add(point);
     return true;
   }
 
-  bool canBacktrackTo(ClassicPoint point) {
-    return path.length > 1 && path[path.length - 2] == point;
+  int? visitedStepFor(ClassicPoint point) {
+    final index = path.indexOf(point);
+    return index == -1 ? null : index + 1;
+  }
+
+  bool canRewindTo(ClassicPoint point) {
+    final index = path.indexOf(point);
+    return index != -1 && index < path.length - 1;
+  }
+
+  void rewindTo(ClassicPoint point) {
+    final index = path.indexOf(point);
+    if (index == -1) {
+      return;
+    }
+    while (path.length - 1 > index) {
+      path.removeLast();
+    }
   }
 
   void backtrack() {
@@ -722,6 +865,34 @@ class ClassicPuzzleBoard {
     final rowDelta = (a.row - b.row).abs();
     final colDelta = (a.col - b.col).abs();
     return (rowDelta + colDelta) == 1;
+  }
+
+  bool _isAllowedDirection(ClassicPoint from, ClassicPoint to) {
+    if (definition.usesFixedRoute) {
+      return true;
+    }
+    final rowDelta = to.row - from.row;
+    final colDelta = to.col - from.col;
+    return (rowDelta == -1 && colDelta == 0) ||
+        (rowDelta == 1 && colDelta == 0) ||
+        (rowDelta == 0 && colDelta == 1);
+  }
+
+  List<ClassicPoint> _candidateMoves(ClassicPoint from) {
+    final candidates = <ClassicPoint>[
+      ClassicPoint(from.row - 1, from.col),
+      ClassicPoint(from.row, from.col + 1),
+      ClassicPoint(from.row + 1, from.col),
+    ];
+    return candidates.where((point) {
+      if (point.row < 0 ||
+          point.col < 0 ||
+          point.row >= definition.size ||
+          point.col >= definition.size) {
+        return false;
+      }
+      return !path.contains(point);
+    }).toList();
   }
 }
 

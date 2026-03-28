@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../models/purchase_record.dart';
@@ -46,10 +45,6 @@ class MonetizationService {
             defaultTargetPlatform == TargetPlatform.iOS);
 
     try {
-      if (isMobileTarget) {
-        await MobileAds.instance.initialize();
-      }
-
       if (!isMobileTarget) {
         return;
       }
@@ -77,24 +72,6 @@ class MonetizationService {
     } catch (_) {
       _billingAvailable = false;
     }
-  }
-
-  BannerAd createBannerAd({
-    void Function(Ad ad)? onLoaded,
-    void Function(LoadAdError error)? onFailed,
-  }) {
-    return BannerAd(
-      size: AdSize.banner,
-      adUnitId: MonetizationConfig.admobAndroidBannerUnitId,
-      listener: BannerAdListener(
-        onAdLoaded: onLoaded,
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-          onFailed?.call(error);
-        },
-      ),
-      request: const AdRequest(),
-    );
   }
 
   Future<bool> buyProduct(String productId) async {

@@ -5,13 +5,50 @@ import '../app_scope.dart';
 import '../models/app_progress.dart';
 import '../services/app_controller.dart';
 import '../services/monetization_config.dart';
-import '../widgets/ad_banner_slot.dart';
 import 'classic_puzzle_screen.dart';
 
 class ClassicDaySelectionScreen extends StatelessWidget {
   const ClassicDaySelectionScreen({super.key});
 
   static const routeName = '/classic-days';
+
+  Future<void> _showClaimCelebration(BuildContext context, int claimedDay) {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Streak claimed',
+      barrierColor: Colors.black.withValues(alpha: 0.12),
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: FadeTransition(
+                opacity: curved,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, -0.08),
+                    end: Offset.zero,
+                  ).animate(curved),
+                  child: _ClaimCelebrationBanner(claimedDay: claimedDay),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +114,11 @@ class ClassicDaySelectionScreen extends StatelessWidget {
                           color: const Color(0xFF95F0D0),
                         ),
                         _InfoPill(
+                          label: 'Total score',
+                          value: '${controller.progress.totalScore}',
+                          color: const Color(0xFFFFE7A8),
+                        ),
+                        _InfoPill(
                           label: 'Next claim opens',
                           value: 'Day $nextClaimDay',
                           color: const Color(0xFFBDEBFF),
@@ -104,12 +146,9 @@ class ClassicDaySelectionScreen extends StatelessWidget {
                                 if (!context.mounted) {
                                   return;
                                 }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Streak claimed. Day ${controller.progress.totalClaims} is now counted toward your ladder.',
-                                    ),
-                                  ),
+                                await _showClaimCelebration(
+                                  context,
+                                  controller.progress.totalClaims,
                                 );
                               }
                             : null,
@@ -255,7 +294,6 @@ class ClassicDaySelectionScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: 24),
-            const Center(child: AdBannerSlot()),
           ],
         ),
       ),
@@ -269,6 +307,173 @@ class ClassicDaySelectionScreen extends StatelessWidget {
       }
     }
     return null;
+  }
+}
+
+class _ClaimCelebrationBanner extends StatefulWidget {
+  const _ClaimCelebrationBanner({required this.claimedDay});
+
+  final int claimedDay;
+
+  @override
+  State<_ClaimCelebrationBanner> createState() => _ClaimCelebrationBannerState();
+}
+
+class _ClaimCelebrationBannerState extends State<_ClaimCelebrationBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFF3C6), Color(0xFFE3FFF2), Color(0xFFDDF4FF)],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 64,
+                height: 64,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: (_controller.value - 0.5) * 0.12,
+                      child: CustomPaint(
+                        painter: _RibbonBurstPainter(progress: _controller.value),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.celebration_rounded,
+                      color: Color(0xFFF4A259),
+                      size: 30,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Congratulations!',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF173432),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Today\'s streak was claimed. Day ${widget.claimedDay} is now added to your ladder.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF173432).withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded),
+                tooltip: 'Dismiss',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RibbonBurstPainter extends CustomPainter {
+  _RibbonBurstPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final colors = [
+      const Color(0xFFF4A259),
+      const Color(0xFF1CC9A6),
+      const Color(0xFF0A80D8),
+    ];
+    for (var i = 0; i < 6; i++) {
+      final x = (size.width / 6) * i + 6;
+      final wave = (progress * 8) + i;
+      final path = Path()
+        ..moveTo(x, 6)
+        ..quadraticBezierTo(
+          x + 8,
+          size.height * 0.3,
+          x - 4,
+          size.height * 0.62,
+        )
+        ..quadraticBezierTo(
+          x + 10,
+          size.height * 0.82,
+          x + (wave % 6) - 3,
+          size.height - 6,
+        );
+      final paint = Paint()
+        ..color = colors[i % colors.length].withValues(alpha: 0.9)
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RibbonBurstPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 
@@ -294,35 +499,52 @@ class _PurchaseTile extends StatelessWidget {
         color: const Color(0xFFF6FBF7),
         borderRadius: BorderRadius.circular(22),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: theme.colorScheme.primary),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 340;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(icon, color: theme.colorScheme.primary),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: compact ? 12 : 0),
+              Align(
+                alignment:
+                    compact ? Alignment.centerLeft : Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: onPressed,
+                  child: Text(
+                    priceLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(height: 4),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          FilledButton(onPressed: onPressed, child: Text(priceLabel)),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -354,6 +576,8 @@ class _InfoPill extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
             ),
@@ -361,6 +585,8 @@ class _InfoPill extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),

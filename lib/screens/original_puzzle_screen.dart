@@ -1,8 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:rive/rive.dart' show RiveAnimation;
 
 enum DifficultyMode { easy, hard }
 
@@ -29,8 +27,6 @@ class ZipPuzzleHome extends StatefulWidget {
 
 class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
   static const int gridSize = 6;
-  static const String _completionRiveAsset =
-      'assets/animations/congrats_ribbons.riv';
 
   late PuzzleBoardData _board;
   final GlobalKey _boardKey = GlobalKey();
@@ -437,7 +433,6 @@ class _ZipPuzzleHomeState extends State<ZipPuzzleHome> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _CompletionDialog(
-                  riveAsset: _completionRiveAsset,
                   onPlayAgain: () {
                     Navigator.of(context).pop();
                     _newPuzzle();
@@ -959,9 +954,8 @@ class _MovesStatChip extends StatelessWidget {
 }
 
 class _CompletionDialog extends StatefulWidget {
-  const _CompletionDialog({required this.riveAsset, required this.onPlayAgain});
+  const _CompletionDialog({required this.onPlayAgain});
 
-  final String riveAsset;
   final VoidCallback onPlayAgain;
 
   @override
@@ -1012,7 +1006,7 @@ class _CompletionDialogState extends State<_CompletionDialog>
           children: [
             SizedBox(
               height: 180,
-              child: _CompletionRiveView(assetName: widget.riveAsset),
+              child: const _CompletionCelebrationArt(),
             ),
             const SizedBox(height: 12),
             AnimatedBuilder(
@@ -1206,39 +1200,15 @@ class _HintPreviewDialogState extends State<_HintPreviewDialog>
   }
 }
 
-class _CompletionRiveView extends StatelessWidget {
-  const _CompletionRiveView({required this.assetName});
-
-  final String assetName;
+class _CompletionCelebrationArt extends StatefulWidget {
+  const _CompletionCelebrationArt();
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ByteData>(
-      future: rootBundle.load(assetName),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasData) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: RiveAnimation.asset(assetName, fit: BoxFit.cover),
-          );
-        }
-        return const _CompletionFallbackArt();
-      },
-    );
-  }
+  State<_CompletionCelebrationArt> createState() =>
+      _CompletionCelebrationArtState();
 }
 
-class _CompletionFallbackArt extends StatefulWidget {
-  const _CompletionFallbackArt();
-
-  @override
-  State<_CompletionFallbackArt> createState() => _CompletionFallbackArtState();
-}
-
-class _CompletionFallbackArtState extends State<_CompletionFallbackArt>
+class _CompletionCelebrationArtState extends State<_CompletionCelebrationArt>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -1259,89 +1229,115 @@ class _CompletionFallbackArtState extends State<_CompletionFallbackArt>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return CustomPaint(
-          painter: _RibbonFallbackPainter(progress: _controller.value),
-          child: const SizedBox.expand(),
+        final pulse = Curves.easeInOut.transform(_controller.value);
+        final shimmer = Curves.easeOut.transform(
+          (_controller.value + 0.2).clamp(0.0, 1.0),
+        );
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFFECFFFB),
+                  Color.lerp(
+                    const Color(0xFFD6F6F0),
+                    const Color(0xFFFFF1DA),
+                    shimmer,
+                  )!,
+                  const Color(0xFFFFF1DA),
+                ],
+              ),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                for (final spec in const [
+                  (Alignment(-0.9, -0.6), Icons.auto_awesome_rounded, 28.0),
+                  (Alignment(0.78, -0.72), Icons.star_rounded, 24.0),
+                  (Alignment(-0.72, 0.62), Icons.diamond_rounded, 20.0),
+                  (Alignment(0.86, 0.54), Icons.auto_awesome_motion_rounded, 26.0),
+                ])
+                  Align(
+                    alignment: spec.$1,
+                    child: Transform.translate(
+                      offset: Offset(
+                        0,
+                        math.sin((_controller.value * math.pi * 2) + spec.$3) *
+                            6,
+                      ),
+                      child: Icon(
+                        spec.$2,
+                        size: spec.$3,
+                        color: const Color(0xFF0A7B83).withValues(alpha: 0.22),
+                      ),
+                    ),
+                  ),
+                Center(
+                  child: Transform.scale(
+                    scale: 0.96 + (pulse * 0.08),
+                    child: Container(
+                      width: 94,
+                      height: 94,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1CC9A6).withValues(
+                              alpha: 0.24,
+                            ),
+                            blurRadius: 28,
+                            offset: const Offset(0, 14),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.celebration_rounded,
+                        size: 48,
+                        color: Color(0xFFF4A259),
+                      ),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 22),
+                    child: Wrap(
+                      spacing: 10,
+                      children: List.generate(3, (index) {
+                        final active = (pulse + (index * 0.16)).clamp(0.0, 1.0);
+                        return Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: [
+                              const Color(0xFF1CC9A6),
+                              const Color(0xFFF4A259),
+                              const Color(0xFF0A7B83),
+                            ][index].withValues(alpha: 0.55 + (active * 0.35)),
+                            shape: BoxShape.circle,
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
-  }
-}
-
-class _RibbonFallbackPainter extends CustomPainter {
-  _RibbonFallbackPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final background = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFECFFFB), Color(0xFFD6F6F0), Color(0xFFFFF1DA)],
-      ).createShader(rect);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(24)),
-      background,
-    );
-
-    final ribbonColors = [
-      const Color(0xFF1CC9A6),
-      const Color(0xFFF4A259),
-      const Color(0xFF0A7B83),
-    ];
-    for (var i = 0; i < 9; i++) {
-      final dx = (size.width / 10) * (i + 1);
-      final swing = math.sin((progress * math.pi * 2) + (i * 0.45)) * 10;
-      final path = Path()
-        ..moveTo(dx, -10)
-        ..quadraticBezierTo(
-          dx + swing,
-          size.height * 0.28,
-          dx - swing * 0.5,
-          size.height * 0.62,
-        )
-        ..quadraticBezierTo(
-          dx + swing * 0.7,
-          size.height * 0.82,
-          dx,
-          size.height + 10,
-        );
-
-      final ribbonPaint = Paint()
-        ..color = ribbonColors[i % ribbonColors.length].withValues(alpha: 0.85)
-        ..strokeWidth = 8
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      canvas.drawPath(path, ribbonPaint);
-    }
-
-    final badgePaint = Paint()..color = const Color(0xFFFFD166);
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height * 0.46),
-      28 + (math.sin(progress * math.pi * 2) * 2),
-      badgePaint,
-    );
-    final checkPaint = Paint()
-      ..color = const Color(0xFF0A7B83)
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final check = Path()
-      ..moveTo(size.width / 2 - 12, size.height * 0.46)
-      ..lineTo(size.width / 2 - 2, size.height * 0.46 + 10)
-      ..lineTo(size.width / 2 + 14, size.height * 0.46 - 8);
-    canvas.drawPath(check, checkPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RibbonFallbackPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }
 

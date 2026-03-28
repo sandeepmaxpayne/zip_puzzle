@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../models/app_progress.dart';
@@ -174,16 +173,6 @@ class AppController extends ChangeNotifier {
         : 'The streak freeze product is not available yet on this build.';
     notifyListeners();
     return didStart;
-  }
-
-  BannerAd createBannerAd({
-    void Function(Ad ad)? onLoaded,
-    void Function(LoadAdError error)? onFailed,
-  }) {
-    return _monetizationService.createBannerAd(
-      onLoaded: onLoaded,
-      onFailed: onFailed,
-    );
   }
 
   Future<List<ClassicLeaderboardEntry>> fetchClassicLeaderboard({
